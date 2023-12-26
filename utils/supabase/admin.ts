@@ -52,6 +52,8 @@ const upsertPriceRecord = async (price: Stripe.Price, retryCount = 0, maxRetries
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await upsertPriceRecord(price, retryCount + 1, maxRetries);
     } else {
+      console.error(upsertError);
+      console.error(JSON.stringify(upsertError));
       throw new Error(`Price insert/update failed after ${maxRetries} retries: ${upsertError}`);
     }
   } else if (upsertError) {
