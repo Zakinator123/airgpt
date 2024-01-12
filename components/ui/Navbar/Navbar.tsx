@@ -35,7 +35,7 @@ export default async function Navbar() {
   // We make this a server function to enforce rehydration on magic link sign in
   const handleSignIn = async () => {
     'use server';
-    
+
     return redirect('/signin');
   };
 
@@ -59,6 +59,10 @@ export default async function Navbar() {
                   Account
                 </Link>
               )}
+              <Link href='/configuration' className={s.link}>
+                Configuration
+              </Link>
+              
             </nav>
           </div>
           <div className="flex justify-end flex-1 space-x-8">
