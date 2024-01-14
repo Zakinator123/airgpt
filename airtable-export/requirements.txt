@@ -1,0 +1,4 @@
+click
+PyYAML
+httpx
+sqlite-utils

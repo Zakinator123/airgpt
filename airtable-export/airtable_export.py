@@ -7,7 +7,7 @@ from urllib.parse import quote, urlencode
 import sqlite_utils
 import time
 import yaml as yaml_
-import csv  # Import the CSV module
+import csv as csv_module  # Rename the imported CSV module
 
 @click.command()
 @click.version_option()
@@ -74,7 +74,8 @@ def cli(
         def write_csv_batch(table, batch):
             filename = f"{table}.csv"
             with open(output / filename, 'a', newline='', encoding='utf-8') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=batch[0].keys())
+                writer = csv_module.DictWriter(csvfile, fieldnames=batch[0].keys())
+                # ... [rest of your CSV writing logic] ...
                 if csvfile.tell() == 0:  # Write header only for an empty file
                     writer.writeheader()
                 writer.writerows(batch)
@@ -128,7 +129,7 @@ def cli(
         if csv:  # CSV handling
             filename = f"{table}.csv"
             with open(output / filename, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=records[0].keys())
+                writer = csv_module.DictWriter(csvfile, fieldnames=records[0].keys())
                 writer.writeheader()
                 writer.writerows(records)
             filenames.append(output / filename)
@@ -188,3 +189,6 @@ def str_representer(dumper, data):
 
 
 yaml_.add_representer(str, str_representer)
+
+if __name__ == "__main__":
+    cli()
