@@ -64,17 +64,18 @@ def cli(
     output.mkdir(parents=True, exist_ok=True)
     if not json and not ndjson and not yaml and not sqlite and not csv:
         yaml = True
-    write_batch = lambda table, batch: None
+    def write_batch(table, batch, fieldnames):
+        pass
     if sqlite:
         db = sqlite_utils.Database(sqlite)
         write_batch = lambda table, batch: db[table].insert_all(
             batch, pk="airtable_id", replace=True, alter=True
         )
     if csv:  # CSV batch writing function
-        def write_csv_batch(table, batch):
+        def write_csv_batch(table, batch, fieldnames):
             filename = f"{table}.csv"
             with open(output / filename, 'a', newline='', encoding='utf-8') as csvfile:
-                writer = csv_module.DictWriter(csvfile, fieldnames=batch[0].keys())
+                writer = csv_module.DictWriter(csvfile, fieldnames=fieldnames, quoting=csv_module.QUOTE_MINIMAL)
                 # ... [rest of your CSV writing logic] ...
                 if csvfile.tell() == 0:  # Write header only for an empty file
                     writer.writeheader()
@@ -90,24 +91,38 @@ def cli(
         if not tables:
             tables = [table["name"] for table in schema_data["tables"]]
 
+    def get_all_keys(records):
+        """Get a comprehensive set of keys from all records."""
+        keys = set()
+        for record in records:
+            keys.update(record.keys())
+        return keys
+
+
     for table in tables:
         records = []
         try:
             db_batch = []
-            for record in all_records(
+            all_records_in_table = all_records(
                 base_id, table, key, http_read_timeout, user_agent=user_agent
-            ):
+            )
+            for record in all_records_in_table:
                 r = {
                     **{"airtable_id": record["id"]},
                     **record["fields"],
                     **{"airtable_createdTime": record["createdTime"]},
                 }
                 records.append(r)
-                db_batch.append(r)
+                
+            all_keys = list(get_all_keys(records))
+            
+            for record in records:
+                db_batch.append(record)
                 if len(db_batch) == 100:
-                    write_batch(table, db_batch)
+                    write_batch(table=table, batch=db_batch, fieldnames=all_keys)
                     db_batch = []
-            write_batch(table, db_batch)  # Make sure the last batch is written
+
+            write_batch(table=table, batch=db_batch, fieldnames=all_keys)  # Make sure the last batch is written
         except HTTPError as exc:
             raise click.ClickException(exc)
         filenames = []
@@ -129,7 +144,7 @@ def cli(
         if csv:  # CSV handling
             filename = f"{table}.csv"
             with open(output / filename, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv_module.DictWriter(csvfile, fieldnames=records[0].keys())
+                writer = csv_module.DictWriter(csvfile, fieldnames=all_keys, quoting=csv_module.QUOTE_MINIMAL)
                 writer.writeheader()
                 writer.writerows(records)
             filenames.append(output / filename)
